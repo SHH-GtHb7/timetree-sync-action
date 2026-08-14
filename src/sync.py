@@ -1,3 +1,4 @@
+import time
 from config import Config
 from gcalendar import GoogleCalendarClient
 from logger import logger
@@ -44,6 +45,10 @@ def sync():
 
     raw_events = client.get_events(calendar)
     events = [Event.from_timetree(raw) for raw in raw_events]
+    
+    # 【変更点1】一度に処理する件数を最新の50件に絞ります
+    events = events[-50:]
+    
     timetree_ids = {event.id for event in events}
 
     google = GoogleCalendarClient(
@@ -84,6 +89,7 @@ def sync():
                 event.to_google(Config.TIMETREE_CALENDAR_CODE),
             )
             created_count += 1
+            time.sleep(0.2)  # 【変更点2】Googleに負荷をかけないよう0.2秒待機
             continue
 
         # Keep one canonical Google event for this TimeTree event.
@@ -104,6 +110,7 @@ def sync():
                 event.to_google(Config.TIMETREE_CALENDAR_CODE),
             )
             updated_count += 1
+            time.sleep(0.2)  # 【変更点2】Googleに負荷をかけないよう0.2秒待機
         else:
             skipped_count += 1
 
@@ -114,6 +121,7 @@ def sync():
                 duplicate["id"],
             )
             deleted_count += 1
+            time.sleep(0.2)
 
     # Delete Google events owned by this sync when the source TimeTree event
     # no longer exists. Native Google Calendar events are never included in
@@ -128,6 +136,7 @@ def sync():
                 google_event["id"],
             )
             deleted_count += 1
+            time.sleep(0.2)
 
     logger.info(
         "Sync complete: created=%d updated=%d deleted=%d skipped=%d",
